@@ -9,3 +9,12 @@ class PostgresSettings(BaseSettings):
 
     class Config:
         env_prefix = "postgres_"
+
+
+class RedisSettings(BaseSettings):
+    host: str
+    port: int
+    password: str
+
+    class Config:
+        env_prefix = "redis_"

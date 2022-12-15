@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css?family=Jost');
+
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0em;
+}
+
+body {
+    display: flex;
+    background-color: #252525;
+}
+
+input[type="password"] {
+    font-family: Verdana;
+}
+
+.center {
+    margin: 15% auto;
+}
+
+.form-field {
+    background-color: #fefefe;
+    color: #151515;
+    border-radius: 0.8em;
+    border: 0.1em;
+    width: 30em;
+    height: 2em;
+    margin: 0.5em 0em 0.5em 0em;
+    padding: 0.75em;
+    font-family: "Jost", Arial, Helvetica, sans-serif;
+    font-size: 1.2em;
+    box-sizing: border-box;
+}
+
+.form-label {
+    color: #fafafa;
+    font-family: "Jost", Arial, Helvetica, sans-serif;
+    font-size: 1.4em;
+}
+
+.form-button {
+    background-color: #7676c4;
+    color: #fefefe;
+    border-radius: 0.2em;
+    border-color: #fefefe;
+    border-width: 0.05em;
+    width: 7.5em;
+    height: 2em;
+    margin: 0.5em 0em 0.5em 0em;
+    font-family: "Jost", Arial, Helvetica, sans-serif;
+    font-size: 1.4em;
+    box-sizing: border-box;
+    cursor: pointer;
+}

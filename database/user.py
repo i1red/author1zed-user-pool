@@ -1,7 +1,8 @@
-import sqlalchemy.exc
-from sqlalchemy.orm import Session
+from typing import Optional
 
-from database.engine import ENGINE
+import sqlalchemy.exc
+
+from database.session import Session
 from database.models import UserModel
 
 
@@ -11,9 +12,14 @@ class NonUniqueUserDataException(Exception):
 
 def save_user(username: str, email: str, password_hash: str) -> None:
     try:
-        with Session(ENGINE) as session:
+        with Session() as session:
             user = UserModel(username=username, email=email, password_hash=password_hash)
             session.add(user)
             session.commit()
     except sqlalchemy.exc.IntegrityError:
         raise NonUniqueUserDataException("Username and email should be unique")
+
+
+def get_user_by_username(username: str) -> Optional[UserModel]:
+    with Session() as session:
+        return session.query(UserModel).filter(UserModel.username == username).first()

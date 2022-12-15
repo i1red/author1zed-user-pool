@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+    <title>Login</title>
+</head>
+<body>
+    <div class="center">
+        <form method="post" action="{{ url_for('login_post_view') }}?{{ query_params | urlencode}}">
+            <label for="username_input" class="form-label">Username</label><br>
+            <input type="text" id="username_input" name="username" class="form-field"><br>
+            <label for="password_input" class="form-label">Password</label><br>
+            <input type="password" id="password_input" name="password" class="form-field"><br>
+            <input type="submit" value="Log In" class="form-button">
+        </form>
+    </div>
+</body>
+</html>
