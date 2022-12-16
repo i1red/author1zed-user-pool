@@ -1,22 +1,19 @@
-@import url('https://fonts.googleapis.com/css?family=Jost');
-
-html, body {
-    height: 100%;
-    width: 100%;
-    margin: 0em;
-}
-
-body {
-    display: flex;
-    background-color: #252525;
-}
-
 input[type="password"] {
     font-family: Verdana;
 }
 
-.center {
-    margin: 15% auto;
+.form-link {
+    color: #cacaca;
+    font-family: "Jost", Arial, Helvetica, sans-serif;
+    font-size: 1em;
+    height: 2em;
+}
+
+.spacer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25em;
 }
 
 .form-field {

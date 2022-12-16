@@ -10,8 +10,10 @@ from settings import PostgresSettings
 
 def _get_connection_string() -> str:
     postgres_settings = PostgresSettings()
-    return f"postgresql+psycopg2://{postgres_settings.user}:{postgres_settings.password}"\
-           f"@{postgres_settings.host}/{postgres_settings.database}"
+    return (
+        f"postgresql+psycopg2://{postgres_settings.user}:{postgres_settings.password}"
+        f"@{postgres_settings.host}/{postgres_settings.database}"
+    )
 
 
 ENGINE: Final[Engine] = create_engine(_get_connection_string())

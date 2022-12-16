@@ -8,5 +8,8 @@ from settings import RedisSettings
 def get_client() -> Redis:
     redis_settings = RedisSettings()
     return Redis(
-        host=redis_settings.host, port=redis_settings.port, password=redis_settings.password, decode_responses=True
+        host=redis_settings.host,
+        port=redis_settings.port,
+        password=redis_settings.password,
+        decode_responses=True,
     )

@@ -1,0 +1,20 @@
+{% extends "base_form.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block form %}
+<form method="post" action="{{ url_for('signup_post_view') }}?{{ query_params | urlencode}}">
+    <label for="username_input" class="form-label">Username</label><br>
+    <input type="text" id="username_input" name="username" class="form-field"><br>
+    <label for="email_input" class="form-label">Email</label><br>
+    <input type="email" id="email_input" name="email" class="form-field"><br>
+    <label for="password_input" class="form-label">Password</label><br>
+    <input type="password" id="password_input" name="password" class="form-field"><br>
+    <div class="spacer">
+        <input type="submit" value="Sign Up" class="form-button">
+        <a href="{{ url_for('login_page_view') }}?{{ query_params | urlencode }}" class="form-link">
+            Already have an account? Log in
+        </a>
+    </div>
+</form>
+{% endblock %}
