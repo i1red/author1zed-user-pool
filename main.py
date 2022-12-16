@@ -2,6 +2,7 @@ import uuid
 from typing import Final, Literal
 
 from fastapi import HTTPException, FastAPI, Form, Query
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 from starlette import status
 from starlette.requests import Request
@@ -13,10 +14,30 @@ from database.client import (
     check_redirect_uri,
     ClientNotRegisteredException,
     RedirectUriNotAllowedException,
+    check_client_secret,
+    SecretMismatchException,
 )
-from database.user import save_user, NonUniqueUserDataException, get_user_by_username
-from redis_data.authorization_code import save_auth_code_data, AuthCodeData
-from redis_data.auth_info import save_auth_info, get_auth_info, AuthInfo, remove_auth_info
+from database.user import (
+    save_user,
+    NonUniqueUserDataException,
+    get_user_by_username,
+    get_user_by_id,
+)
+from redis_data.authorization_code import (
+    save_auth_code_data,
+    AuthCodeData,
+    get_auth_code_data,
+    remove_auth_code,
+)
+from redis_data.auth_info import (
+    save_auth_info,
+    get_auth_info,
+    AuthInfo,
+    remove_auth_info,
+)
+from redis_data.refresh_token import check_if_refresh_token_exists, remove_refresh_token
+from settings import JwtSettings
+from utility.token import generate_token_pair
 from utility.url import set_query_params
 
 app = FastAPI()
@@ -36,9 +57,9 @@ async def authorize_view(
     try:
         check_redirect_uri(client_id, redirect_uri)
     except ClientNotRegisteredException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except RedirectUriNotAllowedException as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
     auth_info_key = uuid.uuid4().hex
     save_auth_info(auth_info_key, AuthInfo(client_id, redirect_uri, state))
@@ -163,3 +184,60 @@ async def error_page_view(request: Request, error_code: int, error_message: str)
         {"request": request, "error_code": error_code, "error_message": error_message},
         status_code=error_code,
     )
+
+
+@app.post("/token")
+async def token_code_view(
+    grant_type: Literal["authorization_code"] = Form(),
+    client_id: str = Form(),
+    client_secret: str = Form(),
+    code: str = Form(),
+):
+    try:
+        check_client_secret(client_id, client_secret)
+    except ClientNotRegisteredException as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+    except SecretMismatchException as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+    auth_code_data = get_auth_code_data(code)
+    if auth_code_data is None:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Code expired")
+
+    remove_auth_code(code)
+
+    user = get_user_by_id(auth_code_data.user_id)
+
+    return generate_token_pair(client_id, user)
+
+
+@app.post("/refresh")
+async def token_refresh_view(
+    grant_type: Literal["refresh_token"] = Form(),
+    client_id: str = Form(),
+    client_secret: str = Form(),
+    refresh_token: str = Form(),
+):
+    try:
+        check_client_secret(client_id, client_secret)
+    except ClientNotRegisteredException as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+    except SecretMismatchException as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+    if not check_if_refresh_token_exists(refresh_token):
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Token expired")
+
+    jwt_settings = JwtSettings()
+    refresh_token_claims = jwt.decode(
+        refresh_token,
+        jwt_settings.refresh_token_secret_key,
+        algorithms=[jwt_settings.algorithm],
+    )
+
+    remove_refresh_token(refresh_token)
+
+    user_id = int(refresh_token_claims["sub"])
+    user = get_user_by_id(user_id)
+
+    return generate_token_pair(client_id, user)

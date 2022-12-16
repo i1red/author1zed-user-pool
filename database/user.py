@@ -27,3 +27,8 @@ def save_user(username: str, email: str, password_hash: str) -> UserModel:
 def get_user_by_username(username: str) -> Optional[UserModel]:
     with Session() as session:
         return session.query(UserModel).filter(UserModel.username == username).first()
+
+
+def get_user_by_id(user_id: int) -> Optional[UserModel]:
+    with Session() as session:
+        return session.get(UserModel, user_id)
