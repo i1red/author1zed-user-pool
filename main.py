@@ -16,7 +16,7 @@ from database.client import (
 )
 from database.user import save_user, NonUniqueUserDataException, get_user_by_username
 from redis_data.authorization_code import save_auth_code_data, AuthCodeData
-from redis_data.state import save_state_data, StateException, get_state_data, StateData
+from redis_data.auth_info import save_auth_info, get_auth_info, AuthInfo, remove_auth_info
 from utility.url import set_query_params
 
 app = FastAPI()
@@ -40,30 +40,30 @@ async def authorize_view(
     except RedirectUriNotAllowedException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    try:
-        save_state_data(state, StateData(client_id, redirect_uri))
-    except StateException as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    auth_info_key = uuid.uuid4().hex
+    save_auth_info(auth_info_key, AuthInfo(client_id, redirect_uri, state))
 
     return RedirectResponse(
-        url=set_query_params("/login", state=state), status_code=status.HTTP_302_FOUND
+        url=set_query_params("/login", auth_info_key=auth_info_key),
+        status_code=status.HTTP_302_FOUND,
     )
 
 
 @app.get("/login")
-async def login_page_view(request: Request, state: str):
+async def login_page_view(request: Request, auth_info_key: str):
     return templates.TemplateResponse(
-        "login.html", {"request": request, "query_params": {"state": state}}
+        "login.html",
+        {"request": request, "query_params": {"auth_info_key": auth_info_key}},
     )
 
 
 @app.post("/login", status_code=status.HTTP_302_FOUND)
 async def login_post_view(
-    username: str = Form(), password: str = Form(), state: str = Query()
+    username: str = Form(), password: str = Form(), auth_info_key: str = Query()
 ):
-    state_data = get_state_data(state)
+    auth_info = get_auth_info(auth_info_key)
 
-    if state_data is None:
+    if auth_info is None:
         return RedirectResponse(
             url=set_query_params(
                 "/authentication_error",
@@ -85,25 +85,27 @@ async def login_post_view(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    authorization_code = uuid.uuid4().hex
+    remove_auth_info(auth_info_key)
 
+    authorization_code = uuid.uuid4().hex
     save_auth_code_data(
         authorization_code,
-        AuthCodeData(client_id=state_data.client_id, user_id=user.id),
+        AuthCodeData(client_id=auth_info.client_id, user_id=user.id),
     )
 
     return RedirectResponse(
         url=set_query_params(
-            state_data.redirect_uri, code=authorization_code, state=state
+            auth_info.redirect_uri, code=authorization_code, state=auth_info.state
         ),
         status_code=status.HTTP_302_FOUND,
     )
 
 
 @app.get("/signup")
-async def signup_page_view(request: Request, state: str):
+async def signup_page_view(request: Request, auth_info_key: str):
     return templates.TemplateResponse(
-        "signup.html", {"request": request, "query_params": {"state": state}}
+        "signup.html",
+        {"request": request, "query_params": {"auth_info_key": auth_info_key}},
     )
 
 
@@ -112,11 +114,11 @@ async def signup_post_view(
     username: str = Form(),
     email: str = Form(),
     password: str = Form(),
-    state: str = Query(),
+    auth_info_key: str = Query(),
 ):
-    state_data = get_state_data(state)
+    auth_info = get_auth_info(auth_info_key)
 
-    if state_data is None:
+    if auth_info is None:
         return RedirectResponse(
             url=set_query_params(
                 "/authentication_error",
@@ -138,16 +140,17 @@ async def signup_post_view(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    authorization_code = uuid.uuid4().hex
+    remove_auth_info(auth_info_key)
 
+    authorization_code = uuid.uuid4().hex
     save_auth_code_data(
         authorization_code,
-        AuthCodeData(client_id=state_data.client_id, user_id=user.id),
+        AuthCodeData(client_id=auth_info.client_id, user_id=user.id),
     )
 
     return RedirectResponse(
         url=set_query_params(
-            state_data.redirect_uri, code=authorization_code, state=state
+            auth_info.redirect_uri, code=authorization_code, state=auth_info.state
         ),
         status_code=status.HTTP_302_FOUND,
     )
