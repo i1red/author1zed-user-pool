@@ -13,9 +13,7 @@ class NonUniqueUserDataException(Exception):
 def save_user(username: str, email: str, password_hash: str) -> UserModel:
     try:
         with Session() as session:
-            user = UserModel(
-                username=username, email=email, password_hash=password_hash
-            )
+            user = UserModel(username=username, email=email, password_hash=password_hash)
             session.add(user)
             session.commit()
             session.refresh(user)

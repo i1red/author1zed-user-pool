@@ -1,8 +1,8 @@
 import uuid
 from typing import Final, Literal
 
-from fastapi import HTTPException, FastAPI, Form, Query
-from jose import jwt, JWTError
+from fastapi import HTTPException, FastAPI, Form, Query, Depends
+from jose import jwt
 from passlib.context import CryptContext
 from starlette import status
 from starlette.requests import Request
@@ -23,20 +23,14 @@ from database.user import (
     get_user_by_username,
     get_user_by_id,
 )
-from redis_data.authorization_code import (
-    save_auth_code_data,
-    AuthCodeData,
-    get_auth_code_data,
-    remove_auth_code,
+from dependencies import create_auth_info_collection, create_auth_code_collection, create_refresh_token_collection
+from entities.auth_code_data import AuthCodeData
+from entities.auth_info import AuthInfo
+from key_value_storage.redis.collections.redis_string_set import RedisStringSet
+from key_value_storage.redis.collections.redis_string_to_dataclass_map import (
+    RedisStringToDataclassMap,
 )
-from redis_data.auth_info import (
-    save_auth_info,
-    get_auth_info,
-    AuthInfo,
-    remove_auth_info,
-)
-from redis_data.refresh_token import check_if_refresh_token_exists, remove_refresh_token
-from settings import JwtSettings
+from settings import JwtSettings, settings_provider
 from utility.token import generate_token_pair
 from utility.url import set_query_params
 
@@ -52,7 +46,11 @@ PASSWORD_CONTEXT: Final = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @app.get("/authorize", status_code=status.HTTP_302_FOUND)
 async def authorize_view(
-    response_type: Literal["code"], client_id: str, redirect_uri: str, state: str
+    response_type: Literal["code"],
+    client_id: str,
+    redirect_uri: str,
+    state: str,
+    auth_info_collection: RedisStringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
 ):
     try:
         check_redirect_uri(client_id, redirect_uri)
@@ -62,7 +60,7 @@ async def authorize_view(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
     auth_info_key = uuid.uuid4().hex
-    save_auth_info(auth_info_key, AuthInfo(client_id, redirect_uri, state))
+    auth_info_collection.save(auth_info_key, AuthInfo(client_id, redirect_uri, state))
 
     return RedirectResponse(
         url=set_query_params("/login", auth_info_key=auth_info_key),
@@ -80,9 +78,13 @@ async def login_page_view(request: Request, auth_info_key: str):
 
 @app.post("/login", status_code=status.HTTP_302_FOUND)
 async def login_post_view(
-    username: str = Form(), password: str = Form(), auth_info_key: str = Query()
+    username: str = Form(),
+    password: str = Form(),
+    auth_info_key: str = Query(),
+    auth_info_collection: RedisStringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
+    auth_code_collection: RedisStringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
 ):
-    auth_info = get_auth_info(auth_info_key)
+    auth_info = auth_info_collection.get(auth_info_key)
 
     if auth_info is None:
         return RedirectResponse(
@@ -106,18 +108,13 @@ async def login_post_view(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    remove_auth_info(auth_info_key)
+    auth_info_collection.remove(auth_info_key)
 
     authorization_code = uuid.uuid4().hex
-    save_auth_code_data(
-        authorization_code,
-        AuthCodeData(client_id=auth_info.client_id, user_id=user.id),
-    )
+    auth_code_collection.save(authorization_code, AuthCodeData(client_id=auth_info.client_id, user_id=user.id))
 
     return RedirectResponse(
-        url=set_query_params(
-            auth_info.redirect_uri, code=authorization_code, state=auth_info.state
-        ),
+        url=set_query_params(auth_info.redirect_uri, code=authorization_code, state=auth_info.state),
         status_code=status.HTTP_302_FOUND,
     )
 
@@ -136,8 +133,10 @@ async def signup_post_view(
     email: str = Form(),
     password: str = Form(),
     auth_info_key: str = Query(),
+    auth_info_collection: RedisStringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
+    auth_code_collection: RedisStringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
 ):
-    auth_info = get_auth_info(auth_info_key)
+    auth_info = auth_info_collection.get(auth_info_key)
 
     if auth_info is None:
         return RedirectResponse(
@@ -161,18 +160,13 @@ async def signup_post_view(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    remove_auth_info(auth_info_key)
+    auth_info_collection.remove(auth_info_key)
 
     authorization_code = uuid.uuid4().hex
-    save_auth_code_data(
-        authorization_code,
-        AuthCodeData(client_id=auth_info.client_id, user_id=user.id),
-    )
+    auth_code_collection.save(authorization_code, AuthCodeData(client_id=auth_info.client_id, user_id=user.id))
 
     return RedirectResponse(
-        url=set_query_params(
-            auth_info.redirect_uri, code=authorization_code, state=auth_info.state
-        ),
+        url=set_query_params(auth_info.redirect_uri, code=authorization_code, state=auth_info.state),
         status_code=status.HTTP_302_FOUND,
     )
 
@@ -192,6 +186,9 @@ async def token_code_view(
     client_id: str = Form(),
     client_secret: str = Form(),
     code: str = Form(),
+    auth_code_collection: RedisStringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
+    refresh_token_collection: RedisStringSet = Depends(create_refresh_token_collection),
+    jwt_settings: JwtSettings = Depends(settings_provider(JwtSettings)),
 ):
     try:
         check_client_secret(client_id, client_secret)
@@ -200,15 +197,15 @@ async def token_code_view(
     except SecretMismatchException as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
-    auth_code_data = get_auth_code_data(code)
+    auth_code_data = auth_code_collection.get(code)
     if auth_code_data is None:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Code expired")
 
-    remove_auth_code(code)
+    auth_code_collection.remove(code)
 
     user = get_user_by_id(auth_code_data.user_id)
 
-    return generate_token_pair(client_id, user)
+    return generate_token_pair(client_id, user, refresh_token_collection, jwt_settings)
 
 
 @app.post("/refresh")
@@ -217,6 +214,8 @@ async def token_refresh_view(
     client_id: str = Form(),
     client_secret: str = Form(),
     refresh_token: str = Form(),
+    refresh_token_collection: RedisStringSet = Depends(create_refresh_token_collection),
+    jwt_settings: JwtSettings = Depends(settings_provider(JwtSettings)),
 ):
     try:
         check_client_secret(client_id, client_secret)
@@ -225,19 +224,18 @@ async def token_refresh_view(
     except SecretMismatchException as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
-    if not check_if_refresh_token_exists(refresh_token):
+    if not refresh_token_collection.contains(refresh_token):
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Token expired")
 
-    jwt_settings = JwtSettings()
     refresh_token_claims = jwt.decode(
         refresh_token,
         jwt_settings.refresh_token_secret_key,
         algorithms=[jwt_settings.algorithm],
     )
 
-    remove_refresh_token(refresh_token)
+    refresh_token_collection.remove(refresh_token)
 
     user_id = int(refresh_token_claims["sub"])
     user = get_user_by_id(user_id)
 
-    return generate_token_pair(client_id, user)
+    return generate_token_pair(client_id, user, refresh_token_collection, jwt_settings)
