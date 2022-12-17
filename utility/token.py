@@ -3,12 +3,12 @@ import datetime
 from jose import jwt
 
 from database.models import UserModel
-from key_value_storage.redis.collections.redis_string_set import RedisStringSet
+from key_value_storage.abstract.collections.string_set import StringSet
 from settings import JwtSettings
 
 
 def generate_token_pair(
-    client_id: str, user: UserModel, refresh_token_collection: RedisStringSet, jwt_settings: JwtSettings
+    client_id: str, user: UserModel, refresh_token_collection: StringSet, jwt_settings: JwtSettings
 ) -> dict:
     access_token_claims = {
         "client_id": client_id,

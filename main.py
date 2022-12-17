@@ -23,13 +23,15 @@ from database.user import (
     get_user_by_username,
     get_user_by_id,
 )
-from dependencies import create_auth_info_collection, create_auth_code_collection, create_refresh_token_collection
+from dependencies.key_value_storage import (
+    create_auth_info_collection,
+    create_auth_code_collection,
+    create_refresh_token_collection,
+)
 from entities.auth_code_data import AuthCodeData
 from entities.auth_info import AuthInfo
-from key_value_storage.redis.collections.redis_string_set import RedisStringSet
-from key_value_storage.redis.collections.redis_string_to_dataclass_map import (
-    RedisStringToDataclassMap,
-)
+from key_value_storage.abstract.collections.string_set import StringSet
+from key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
 from settings import JwtSettings, settings_provider
 from utility.token import generate_token_pair
 from utility.url import set_query_params
@@ -50,7 +52,7 @@ async def authorize_view(
     client_id: str,
     redirect_uri: str,
     state: str,
-    auth_info_collection: RedisStringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
+    auth_info_collection: StringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
 ):
     try:
         check_redirect_uri(client_id, redirect_uri)
@@ -81,8 +83,8 @@ async def login_post_view(
     username: str = Form(),
     password: str = Form(),
     auth_info_key: str = Query(),
-    auth_info_collection: RedisStringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
-    auth_code_collection: RedisStringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
+    auth_info_collection: StringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
+    auth_code_collection: StringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
 ):
     auth_info = auth_info_collection.get(auth_info_key)
 
@@ -133,8 +135,8 @@ async def signup_post_view(
     email: str = Form(),
     password: str = Form(),
     auth_info_key: str = Query(),
-    auth_info_collection: RedisStringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
-    auth_code_collection: RedisStringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
+    auth_info_collection: StringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
+    auth_code_collection: StringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
 ):
     auth_info = auth_info_collection.get(auth_info_key)
 
@@ -186,8 +188,8 @@ async def token_code_view(
     client_id: str = Form(),
     client_secret: str = Form(),
     code: str = Form(),
-    auth_code_collection: RedisStringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
-    refresh_token_collection: RedisStringSet = Depends(create_refresh_token_collection),
+    auth_code_collection: StringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
+    refresh_token_collection: StringSet = Depends(create_refresh_token_collection),
     jwt_settings: JwtSettings = Depends(settings_provider(JwtSettings)),
 ):
     try:
@@ -214,7 +216,7 @@ async def token_refresh_view(
     client_id: str = Form(),
     client_secret: str = Form(),
     refresh_token: str = Form(),
-    refresh_token_collection: RedisStringSet = Depends(create_refresh_token_collection),
+    refresh_token_collection: StringSet = Depends(create_refresh_token_collection),
     jwt_settings: JwtSettings = Depends(settings_provider(JwtSettings)),
 ):
     try:

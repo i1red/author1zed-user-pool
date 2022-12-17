@@ -1,13 +1,15 @@
 import dataclasses
 import datetime
-from typing import Generic, TypeVar, Type
+from typing import TypeVar, Type
 
 from redis.client import Redis
+
+from key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
 
 TObject = TypeVar("TObject")
 
 
-class RedisStringToDataclassMap(Generic[TObject]):
+class RedisStringToDataclassMap(StringToDataclassMap[TObject]):
     def __init__(
         self,
         redis_client: Redis,

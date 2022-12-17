@@ -3,11 +3,12 @@ from typing import Final
 
 from redis.client import Redis
 
+from key_value_storage.abstract.collections.string_set import StringSet
 
 EMPTY_VALUE: Final[str] = ""
 
 
-class RedisStringSet:
+class RedisStringSet(StringSet):
     def __init__(
         self,
         redis_client: Redis,
