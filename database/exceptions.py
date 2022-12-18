@@ -1,0 +1,2 @@
+class NonUniqueUserDataException(Exception):
+    pass

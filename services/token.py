@@ -2,13 +2,13 @@ import datetime
 
 from jose import jwt
 
-from database.models import UserModel
+from entities.user import User
 from key_value_storage.abstract.collections.string_set import StringSet
 from settings import JwtSettings
 
 
 def generate_token_pair(
-    client_id: str, user: UserModel, refresh_token_collection: StringSet, jwt_settings: JwtSettings
+    client_id: str, user: User, refresh_token_collection: StringSet, jwt_settings: JwtSettings
 ) -> dict:
     access_token_claims = {
         "client_id": client_id,

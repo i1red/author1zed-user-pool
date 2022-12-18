@@ -3,8 +3,8 @@ import datetime
 from fastapi import Depends
 from redis.client import Redis
 
-from entities.auth_code_data import AuthCodeData
-from entities.auth_info import AuthInfo
+from objects.auth_code_data import AuthCodeData
+from objects.auth_info import AuthInfo
 from key_value_storage.abstract.collections.string_set import StringSet
 from key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
 from key_value_storage.redis.collections.factory_functions import (

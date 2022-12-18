@@ -2,8 +2,8 @@ import datetime
 
 from redis.client import Redis
 
-from entities.auth_code_data import AuthCodeData
-from entities.auth_info import AuthInfo
+from objects.auth_code_data import AuthCodeData
+from objects.auth_info import AuthInfo
 from key_value_storage.redis.collections.redis_string_set import RedisStringSet
 from key_value_storage.redis.collections.redis_string_to_dataclass_map import (
     RedisStringToDataclassMap,

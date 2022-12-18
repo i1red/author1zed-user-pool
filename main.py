@@ -10,31 +10,30 @@ from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
-from database.client import (
-    check_redirect_uri,
-    ClientNotRegisteredException,
-    RedirectUriNotAllowedException,
-    check_client_secret,
-    SecretMismatchException,
-)
-from database.user import (
-    save_user,
-    NonUniqueUserDataException,
-    get_user_by_username,
-    get_user_by_id,
-)
+from database.abstract.repositories.client_repository import ClientRepository
+from database.abstract.repositories.user_repository import UserRepository
+from database.exceptions import NonUniqueUserDataException
+from dependencies.database import create_user_repository, create_client_repository
 from dependencies.key_value_storage import (
     create_auth_info_collection,
     create_auth_code_collection,
     create_refresh_token_collection,
 )
-from entities.auth_code_data import AuthCodeData
-from entities.auth_info import AuthInfo
+from objects.auth_code_data import AuthCodeData
+from objects.auth_info import AuthInfo
+from entities.user import User
 from key_value_storage.abstract.collections.string_set import StringSet
 from key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
+from services.client import (
+    ClientNotRegisteredException,
+    RedirectUriNotAllowedException,
+    SecretMismatchException,
+    check_client_secret,
+    check_redirect_uri,
+)
 from settings import JwtSettings, settings_provider
-from utility.token import generate_token_pair
-from utility.url import set_query_params
+from services.token import generate_token_pair
+from services.url import set_query_params
 
 app = FastAPI()
 
@@ -52,10 +51,11 @@ async def authorize_view(
     client_id: str,
     redirect_uri: str,
     state: str,
+    client_repository: ClientRepository = Depends(create_client_repository),
     auth_info_collection: StringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
 ):
     try:
-        check_redirect_uri(client_id, redirect_uri)
+        check_redirect_uri(client_id, redirect_uri, client_repository)
     except ClientNotRegisteredException as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except RedirectUriNotAllowedException as e:
@@ -83,6 +83,7 @@ async def login_post_view(
     username: str = Form(),
     password: str = Form(),
     auth_info_key: str = Query(),
+    user_repository: UserRepository = Depends(create_user_repository),
     auth_info_collection: StringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
     auth_code_collection: StringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
 ):
@@ -98,7 +99,7 @@ async def login_post_view(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    user = get_user_by_username(username)
+    user = user_repository.get_by_username(username)
 
     if user is None or not PASSWORD_CONTEXT.verify(password, user.password_hash):
         return RedirectResponse(
@@ -135,6 +136,7 @@ async def signup_post_view(
     email: str = Form(),
     password: str = Form(),
     auth_info_key: str = Query(),
+    user_repository: UserRepository = Depends(create_user_repository),
     auth_info_collection: StringToDataclassMap[AuthInfo] = Depends(create_auth_info_collection),
     auth_code_collection: StringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
 ):
@@ -151,7 +153,7 @@ async def signup_post_view(
         )
 
     try:
-        user = save_user(username, email, PASSWORD_CONTEXT.hash(password))
+        user = user_repository.save(User.create(username, email, PASSWORD_CONTEXT.hash(password)))
     except NonUniqueUserDataException as e:
         return RedirectResponse(
             url=set_query_params(
@@ -188,12 +190,14 @@ async def token_code_view(
     client_id: str = Form(),
     client_secret: str = Form(),
     code: str = Form(),
+    client_repository: ClientRepository = Depends(create_client_repository),
+    user_repository: UserRepository = Depends(create_user_repository),
     auth_code_collection: StringToDataclassMap[AuthCodeData] = Depends(create_auth_code_collection),
     refresh_token_collection: StringSet = Depends(create_refresh_token_collection),
     jwt_settings: JwtSettings = Depends(settings_provider(JwtSettings)),
 ):
     try:
-        check_client_secret(client_id, client_secret)
+        check_client_secret(client_id, client_secret, client_repository)
     except ClientNotRegisteredException as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except SecretMismatchException as e:
@@ -205,7 +209,7 @@ async def token_code_view(
 
     auth_code_collection.remove(code)
 
-    user = get_user_by_id(auth_code_data.user_id)
+    user = user_repository.get_by_id(auth_code_data.user_id)
 
     return generate_token_pair(client_id, user, refresh_token_collection, jwt_settings)
 
@@ -216,11 +220,13 @@ async def token_refresh_view(
     client_id: str = Form(),
     client_secret: str = Form(),
     refresh_token: str = Form(),
+    client_repository: ClientRepository = Depends(create_client_repository),
+    user_repository: UserRepository = Depends(create_user_repository),
     refresh_token_collection: StringSet = Depends(create_refresh_token_collection),
     jwt_settings: JwtSettings = Depends(settings_provider(JwtSettings)),
 ):
     try:
-        check_client_secret(client_id, client_secret)
+        check_client_secret(client_id, client_secret, client_repository)
     except ClientNotRegisteredException as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except SecretMismatchException as e:
@@ -238,6 +244,6 @@ async def token_refresh_view(
     refresh_token_collection.remove(refresh_token)
 
     user_id = int(refresh_token_claims["sub"])
-    user = get_user_by_id(user_id)
+    user = user_repository.get_by_id(user_id)
 
     return generate_token_pair(client_id, user, refresh_token_collection, jwt_settings)
