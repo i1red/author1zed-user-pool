@@ -3,7 +3,6 @@ import uuid
 from typing import Final, Literal
 
 from fastapi import HTTPException, FastAPI, Form, Query, Depends
-from passlib.context import CryptContext
 from starlette import status
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
@@ -19,9 +18,9 @@ from author1zd.dependencies.key_value_storage import (
     create_auth_code_collection,
     create_refresh_token_collection,
 )
+from author1zd.entities.user import User
 from author1zd.objects.auth_code_data import AuthCodeData
 from author1zd.objects.auth_info import AuthInfo
-from author1zd.entities.user import User
 from author1zd.key_value_storage.abstract.collections.string_set import StringSet
 from author1zd.key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
 from author1zd.services.client import (
@@ -33,6 +32,7 @@ from author1zd.services.client import (
 )
 from author1zd.settings import JwtSettings, settings_provider
 from author1zd.services.token import generate_token_pair, get_refresh_token_claims
+from author1zd.utility.password import verify_password, hash_password
 from author1zd.utility.url import set_query_params
 
 BASE_DIR: Final[str] = os.path.dirname(os.path.realpath(__file__))
@@ -42,9 +42,6 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
-
-
-PASSWORD_CONTEXT: Final = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 @app.get("/authorize", status_code=status.HTTP_302_FOUND)
@@ -103,7 +100,7 @@ async def login_post_view(
 
     user = user_repository.get_by_username(username)
 
-    if user is None or not PASSWORD_CONTEXT.verify(password, user.password_hash):
+    if user is None or not verify_password(password, user.password_hash):
         return RedirectResponse(
             url=set_query_params(
                 "/authentication_error",
@@ -155,7 +152,7 @@ async def signup_post_view(
         )
 
     try:
-        user = user_repository.save(User.create(username, email, PASSWORD_CONTEXT.hash(password)))
+        user = user_repository.save(User.create(username, email, hash_password(password)))
     except NonUniqueUserDataException as e:
         return RedirectResponse(
             url=set_query_params(
