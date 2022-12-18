@@ -1,8 +1,8 @@
 from dataclasses import asdict
 from typing import Type, TypeVar
 
-from database.sqlalchemy.models import BaseModel
-from database.sqlalchemy.converters.converter import Converter
+from author1zd.database.sqlalchemy.models import BaseModel
+from author1zd.database.sqlalchemy.converters.converter import Converter
 
 TEntity = TypeVar("TEntity")
 TModel = TypeVar("TModel", bound=BaseModel)

@@ -1,4 +1,4 @@
-from database.abstract.repositories.client_repository import ClientRepository
+from author1zd.database.abstract.repositories.client_repository import ClientRepository
 
 
 class ClientNotRegisteredException(Exception):

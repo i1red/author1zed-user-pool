@@ -7,5 +7,5 @@ poetry install
 
 Run:
 ```commandline
-uvicorn 'main:app'
+uvicorn 'author1zd.app:app'
 ```

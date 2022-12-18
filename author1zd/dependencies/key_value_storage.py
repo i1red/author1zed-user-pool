@@ -3,16 +3,16 @@ import datetime
 from fastapi import Depends
 from redis.client import Redis
 
-from objects.auth_code_data import AuthCodeData
-from objects.auth_info import AuthInfo
-from key_value_storage.abstract.collections.string_set import StringSet
-from key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
-from key_value_storage.redis.collections.factory_functions import (
+from author1zd.objects.auth_code_data import AuthCodeData
+from author1zd.objects.auth_info import AuthInfo
+from author1zd.key_value_storage.abstract.collections.string_set import StringSet
+from author1zd.key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
+from author1zd.key_value_storage.redis.collections.factory_functions import (
     create_redis_auth_code_collection,
     create_redis_auth_info_collection,
     create_redis_refresh_token_collection,
 )
-from settings import RedisSettings, AuthSettings, JwtSettings, settings_provider
+from author1zd.settings import RedisSettings, AuthSettings, JwtSettings, settings_provider
 
 
 def create_redis_client(

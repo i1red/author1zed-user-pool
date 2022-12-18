@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TypeVar, Generic
 
-from database.sqlalchemy.models import BaseModel
+from author1zd.database.sqlalchemy.models import BaseModel
 
 
 TEntity = TypeVar("TEntity")

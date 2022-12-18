@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from entities.client import Client
+from author1zd.entities.client import Client
 
 
 class ClientRepository(ABC):

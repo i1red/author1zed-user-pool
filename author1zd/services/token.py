@@ -3,12 +3,12 @@ from dataclasses import asdict
 
 from jose import jwt
 
-from entities.user import User
-from key_value_storage.abstract.collections.string_set import StringSet
-from objects.access_token_claims import AccessTokenClaims
-from objects.refresh_token_claims import RefreshTokenClaims
-from exchange_objects.token_pair import TokenPair
-from settings import JwtSettings
+from author1zd.entities.user import User
+from author1zd.key_value_storage.abstract.collections.string_set import StringSet
+from author1zd.objects.access_token_claims import AccessTokenClaims
+from author1zd.objects.refresh_token_claims import RefreshTokenClaims
+from author1zd.exchange_objects.token_pair import TokenPair
+from author1zd.settings import JwtSettings
 
 
 def generate_token_pair(

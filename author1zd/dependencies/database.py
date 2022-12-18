@@ -4,12 +4,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
-from database.abstract.repositories.client_repository import ClientRepository
-from database.abstract.repositories.user_repository import UserRepository
-from database.sqlalchemy.models import BaseModel
-from database.sqlalchemy.repositories.sqlalchemy_client_repository import SqlAlchemyClientRepository
-from database.sqlalchemy.repositories.sqlalchemy_user_repository import SqlAlchemyUserRepository
-from settings import PostgresSettings
+from author1zd.database.abstract.repositories.client_repository import ClientRepository
+from author1zd.database.abstract.repositories.user_repository import UserRepository
+from author1zd.database.sqlalchemy.models import BaseModel
+from author1zd.database.sqlalchemy.repositories.sqlalchemy_client_repository import SqlAlchemyClientRepository
+from author1zd.database.sqlalchemy.repositories.sqlalchemy_user_repository import SqlAlchemyUserRepository
+from author1zd.settings import PostgresSettings
 
 
 def _get_connection_string() -> str:

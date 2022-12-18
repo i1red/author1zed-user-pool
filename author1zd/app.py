@@ -1,3 +1,4 @@
+import os
 import uuid
 from typing import Final, Literal
 
@@ -9,36 +10,38 @@ from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
-from database.abstract.repositories.client_repository import ClientRepository
-from database.abstract.repositories.user_repository import UserRepository
-from database.exceptions import NonUniqueUserDataException
-from dependencies.database import create_user_repository, create_client_repository
-from dependencies.key_value_storage import (
+from author1zd.database.abstract.repositories.client_repository import ClientRepository
+from author1zd.database.abstract.repositories.user_repository import UserRepository
+from author1zd.database.exceptions import NonUniqueUserDataException
+from author1zd.dependencies.database import create_user_repository, create_client_repository
+from author1zd.dependencies.key_value_storage import (
     create_auth_info_collection,
     create_auth_code_collection,
     create_refresh_token_collection,
 )
-from objects.auth_code_data import AuthCodeData
-from objects.auth_info import AuthInfo
-from entities.user import User
-from key_value_storage.abstract.collections.string_set import StringSet
-from key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
-from services.client import (
+from author1zd.objects.auth_code_data import AuthCodeData
+from author1zd.objects.auth_info import AuthInfo
+from author1zd.entities.user import User
+from author1zd.key_value_storage.abstract.collections.string_set import StringSet
+from author1zd.key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
+from author1zd.services.client import (
     ClientNotRegisteredException,
     RedirectUriNotAllowedException,
     SecretMismatchException,
     check_client_secret,
     check_redirect_uri,
 )
-from settings import JwtSettings, settings_provider
-from services.token import generate_token_pair, get_refresh_token_claims
-from utility.url import set_query_params
+from author1zd.settings import JwtSettings, settings_provider
+from author1zd.services.token import generate_token_pair, get_refresh_token_claims
+from author1zd.utility.url import set_query_params
+
+BASE_DIR: Final[str] = os.path.dirname(os.path.realpath(__file__))
 
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 
 PASSWORD_CONTEXT: Final = CryptContext(schemes=["bcrypt"], deprecated="auto")

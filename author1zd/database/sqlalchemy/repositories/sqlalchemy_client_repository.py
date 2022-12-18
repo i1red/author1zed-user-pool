@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 
-from database.abstract.repositories.client_repository import ClientRepository
-from database.sqlalchemy.models import ClientAppModel
-from entities.client import Client
+from author1zd.database.abstract.repositories.client_repository import ClientRepository
+from author1zd.database.sqlalchemy.models import ClientAppModel
+from author1zd.entities.client import Client
 
 
 class SqlAlchemyClientRepository(ClientRepository):

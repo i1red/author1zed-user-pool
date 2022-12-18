@@ -1,12 +1,12 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database.abstract.repositories.user_repository import UserRepository
-from database.exceptions import NonUniqueUserDataException
-from database.sqlalchemy.models import UserModel
-from database.sqlalchemy.converters.converter import Converter
-from database.sqlalchemy.converters.default_converter import DefaultConverter
-from entities.user import User
+from author1zd.database.abstract.repositories.user_repository import UserRepository
+from author1zd.database.exceptions import NonUniqueUserDataException
+from author1zd.database.sqlalchemy.models import UserModel
+from author1zd.database.sqlalchemy.converters.converter import Converter
+from author1zd.database.sqlalchemy.converters.default_converter import DefaultConverter
+from author1zd.entities.user import User
 
 
 class SqlAlchemyUserRepository(UserRepository):

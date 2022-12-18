@@ -3,7 +3,7 @@ from typing import Final
 
 from redis.client import Redis
 
-from key_value_storage.abstract.collections.string_set import StringSet
+from author1zd.key_value_storage.abstract.collections.string_set import StringSet
 
 EMPTY_VALUE: Final[str] = ""
 

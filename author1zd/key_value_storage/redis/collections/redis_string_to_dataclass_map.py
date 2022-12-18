@@ -4,7 +4,7 @@ from typing import TypeVar, Type
 
 from redis.client import Redis
 
-from key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
+from author1zd.key_value_storage.abstract.collections.string_to_dataclass_map import StringToDataclassMap
 
 TObject = TypeVar("TObject")
 
