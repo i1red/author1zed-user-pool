@@ -2,7 +2,6 @@ import uuid
 from typing import Final, Literal
 
 from fastapi import HTTPException, FastAPI, Form, Query, Depends
-from jose import jwt
 from passlib.context import CryptContext
 from starlette import status
 from starlette.requests import Request
@@ -32,8 +31,8 @@ from services.client import (
     check_redirect_uri,
 )
 from settings import JwtSettings, settings_provider
-from services.token import generate_token_pair
-from services.url import set_query_params
+from services.token import generate_token_pair, get_refresh_token_claims
+from utility.url import set_query_params
 
 app = FastAPI()
 
@@ -238,20 +237,13 @@ async def token_refresh_view(
     if not refresh_token_collection.contains(refresh_token):
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Token expired")
 
-    refresh_token_claims = jwt.decode(
-        refresh_token,
-        jwt_settings.refresh_token_secret_key,
-        algorithms=[jwt_settings.algorithm],
-    )
+    refresh_token_claims = get_refresh_token_claims(refresh_token, jwt_settings)
 
-    token_client_id = refresh_token_claims["client_id"]
-
-    if client_id != token_client_id:
+    if client_id != refresh_token_claims.client_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid client id")
 
     refresh_token_collection.remove(refresh_token)
 
-    user_id = int(refresh_token_claims["sub"])
-    user = user_repository.get_by_id(user_id)
+    user = user_repository.get_by_id(int(refresh_token_claims.sub))
 
     return generate_token_pair(client_id, user, refresh_token_collection, jwt_settings)

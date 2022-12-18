@@ -16,5 +16,5 @@ class SqlAlchemyClientRepository(ClientRepository):
                 id=client_model.id,
                 client_id=client_model.client_id,
                 client_secret=client_model.client_secret,
-                redirect_uris=[redirect_uri_model.uri for redirect_uri_model in client_model.redirect_uris]
+                redirect_uris=[redirect_uri_model.uri for redirect_uri_model in client_model.redirect_uris],
             )
