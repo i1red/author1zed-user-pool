@@ -207,6 +207,9 @@ async def token_code_view(
     if auth_code_data is None:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Code expired")
 
+    if client_id != auth_code_data.client_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid client id")
+
     auth_code_collection.remove(code)
 
     user = user_repository.get_by_id(auth_code_data.user_id)
@@ -240,6 +243,11 @@ async def token_refresh_view(
         jwt_settings.refresh_token_secret_key,
         algorithms=[jwt_settings.algorithm],
     )
+
+    token_client_id = refresh_token_claims["client_id"]
+
+    if client_id != token_client_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid client id")
 
     refresh_token_collection.remove(refresh_token)
 
